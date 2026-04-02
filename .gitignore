@@ -2,6 +2,8 @@ Cargo.lock
 /target
 /data
 /light_client_data
+/bip157
+/bip157-store
 /kyoto
 .DS_Store
 .idea/

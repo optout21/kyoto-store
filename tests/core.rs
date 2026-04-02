@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use bip157::{
+use bip157_store::{
     chain::{checkpoints::HeaderCheckpoint, BlockHeaderChanges, ChainState},
     client::Client,
     node::Node,
@@ -57,7 +57,7 @@ fn new_node(
     let host = (IpAddr::V4(*socket_addr.ip()), Some(socket_addr.port()));
     let mut trusted: TrustedPeer = host.into();
     trusted.set_services(ServiceFlags::P2P_V2);
-    let builder = bip157::builder::Builder::new(bitcoin::Network::Regtest);
+    let builder = bip157_store::builder::Builder::new(bitcoin::Network::Regtest);
     let builder = builder.chain_state(chain_state);
     let (node, client) = builder.add_peer(host).data_dir(tempdir_path).build();
     (node, client)
@@ -150,7 +150,7 @@ async fn live_reorg() {
     // Make sure the reorg was caught
     while let Some(message) = channel.recv().await {
         match message {
-            bip157::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
+            bip157_store::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
                 accepted: _,
                 reorganized: blocks,
             }) => {
@@ -158,7 +158,7 @@ async fn live_reorg() {
                 assert_eq!(blocks.first().unwrap().header.block_hash(), old_best);
                 assert_eq!(old_height as u32, blocks.first().unwrap().height);
             }
-            bip157::messages::Event::FiltersSynced(update) => {
+            bip157_store::messages::Event::FiltersSynced(update) => {
                 assert_eq!(update.tip().hash, best);
                 requester.shutdown().unwrap();
                 break;
@@ -202,7 +202,7 @@ async fn live_reorg_additional_sync() {
     // Make sure the reorg was caught
     while let Some(message) = channel.recv().await {
         match message {
-            bip157::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
+            bip157_store::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
                 accepted: _,
                 reorganized: blocks,
             }) => {
@@ -210,7 +210,7 @@ async fn live_reorg_additional_sync() {
                 assert_eq!(blocks.first().unwrap().header.block_hash(), old_best);
                 assert_eq!(old_height as u32, blocks.first().unwrap().height);
             }
-            bip157::messages::Event::FiltersSynced(update) => {
+            bip157_store::messages::Event::FiltersSynced(update) => {
                 assert_eq!(update.tip().hash, best);
                 break;
             }
@@ -304,7 +304,7 @@ async fn stop_reorg_resync() {
     // Make sure the reorganization is caught after a cold start
     while let Some(message) = channel.recv().await {
         match message {
-            bip157::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
+            bip157_store::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
                 accepted: _,
                 reorganized: blocks,
             }) => {
@@ -312,7 +312,7 @@ async fn stop_reorg_resync() {
                 assert_eq!(blocks.first().unwrap().header.block_hash(), old_best);
                 assert_eq!(old_height as u32, blocks.first().unwrap().height);
             }
-            bip157::messages::Event::FiltersSynced(update) => {
+            bip157_store::messages::Event::FiltersSynced(update) => {
                 println!("Done");
                 assert_eq!(update.tip().hash, best);
                 break;
@@ -394,7 +394,7 @@ async fn stop_reorg_two_resync() {
     let handle = tokio::task::spawn(async move { print_logs(info_rx, warn_rx).await });
     while let Some(message) = channel.recv().await {
         match message {
-            bip157::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
+            bip157_store::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
                 accepted: _,
                 reorganized: blocks,
             }) => {
@@ -402,7 +402,7 @@ async fn stop_reorg_two_resync() {
                 assert_eq!(blocks.last().unwrap().header.block_hash(), old_best);
                 assert_eq!(old_height as u32, blocks.last().unwrap().height);
             }
-            bip157::messages::Event::FiltersSynced(update) => {
+            bip157_store::messages::Event::FiltersSynced(update) => {
                 println!("Done");
                 assert_eq!(update.tip().hash, best);
                 break;
@@ -483,10 +483,10 @@ async fn stop_reorg_start_on_orphan() {
     // Ensure SQL is able to catch the fork by loading in headers from the database
     while let Some(message) = channel.recv().await {
         match message {
-            bip157::messages::Event::ChainUpdate(BlockHeaderChanges::Connected(header)) => {
+            bip157_store::messages::Event::ChainUpdate(BlockHeaderChanges::Connected(header)) => {
                 headers.push(header);
             }
-            bip157::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
+            bip157_store::messages::Event::ChainUpdate(BlockHeaderChanges::Reorganized {
                 accepted: _,
                 reorganized: blocks,
             }) => {
@@ -494,7 +494,7 @@ async fn stop_reorg_start_on_orphan() {
                 assert_eq!(blocks.first().unwrap().header.block_hash(), old_best);
                 assert_eq!(old_height as u32, blocks.first().unwrap().height);
             }
-            bip157::messages::Event::FiltersSynced(update) => {
+            bip157_store::messages::Event::FiltersSynced(update) => {
                 println!("Done");
                 assert_eq!(update.tip().hash, best);
                 break;
@@ -635,6 +635,6 @@ async fn tx_can_broadcast() {
 
 #[tokio::test]
 async fn dns_works() {
-    let hostname = bip157::lookup_host("seed.bitcoin.sipa.be").await;
+    let hostname = bip157_store::lookup_host("seed.bitcoin.sipa.be").await;
     assert!(!hostname.is_empty());
 }

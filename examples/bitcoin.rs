@@ -1,9 +1,9 @@
 //! Sync a simple script with the Bitcoin network. This example is intended to demonstrate the
 //! expected sync time on your machine and in your region.
 
-use bip157::builder::Builder;
-use bip157::chain::{BlockHeaderChanges, ChainState};
-use bip157::{lookup_host, Client, Event, HeaderCheckpoint, Network, ScriptBuf};
+use bip157_store::builder::Builder;
+use bip157_store::chain::{BlockHeaderChanges, ChainState};
+use bip157_store::{lookup_host, Client, Event, HeaderCheckpoint, Network, ScriptBuf};
 use std::collections::HashSet;
 use tokio::time::Instant;
 
@@ -33,7 +33,7 @@ async fn main() {
         // Add some initial peers
         .add_peers(seeds.into_iter().map(From::from))
         // Connections over Tor are supported by Socks5 proxy
-        // .socks5_proxy(bip157::Socks5Proxy::local())
+        // .socks5_proxy(bip157_store::Socks5Proxy::local())
         // Create the node and client
         .build();
     // Run the node on a separate task

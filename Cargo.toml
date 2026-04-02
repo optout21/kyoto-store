@@ -1,11 +1,11 @@
 [package]
-name = "bip157"
+name = "bip157-store"
 version = "0.4.0"
 authors = ["Rob <rob@2140.dev>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A Bitcoin light-client according to the BIP-157/BIP-158 specifications"
-repository = "https://github.com/2140-dev/kyoto"
+repository = "https://github.com/optout21/kyoto-store"
 readme = "README.md"
 keywords = ["bitcoin", "cryptography", "network", "peer-to-peer"]
 categories = ["cryptography::cryptocurrencies"]
@@ -44,5 +44,5 @@ tokio = { version = "1.19", default-features = false, features = [
 ] }
 
 [lib]
-name = "bip157"
+name = "bip157_store"
 path = "src/lib.rs"

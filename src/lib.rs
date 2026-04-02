@@ -8,7 +8,7 @@
 //! # Example usage
 //!
 //! ```no_run
-//! use bip157::{Builder, Event, Client, Network, BlockHash};
+//! use bip157_store::{Builder, Event, Client, Network, BlockHash};
 //!
 //! #[tokio::main]
 //! async fn main() {
@@ -183,7 +183,7 @@ impl std::cmp::Ord for IndexedFilter {
 ///
 /// ```rust
 /// use std::net::{IpAddr, Ipv4Addr};
-/// use bip157::{TrustedPeer, ServiceFlags, AddrV2};
+/// use bip157_store::{TrustedPeer, ServiceFlags, AddrV2};
 ///
 /// let local_host = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 /// let mut trusted = TrustedPeer::from_ip(local_host);
@@ -361,7 +361,7 @@ impl Default for Config {
 /// ```no_run
 /// use std::net::{IpAddr, Ipv4Addr};
 ///
-/// use bip157::lookup_host;
+/// use bip157_store::lookup_host;
 ///
 /// #[tokio::main]
 /// async fn main() {

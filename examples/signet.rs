@@ -1,10 +1,10 @@
-//! bip157 expects you check your scripts directly. Here is an example flow of how to query a filter
+//! bip157_store expects you check your scripts directly. Here is an example flow of how to query a filter
 //! and request a block be downloaded.
 
-use bip157::chain::{BlockHeaderChanges, ChainState};
-use bip157::messages::Event;
-use bip157::{builder::Builder, chain::checkpoints::HeaderCheckpoint, Client};
-use bip157::{Address, BlockHash, Network};
+use bip157_store::chain::{BlockHeaderChanges, ChainState};
+use bip157_store::messages::Event;
+use bip157_store::{builder::Builder, chain::checkpoints::HeaderCheckpoint, Client};
+use bip157_store::{Address, BlockHash, Network};
 use std::collections::HashSet;
 use std::str::FromStr;
 

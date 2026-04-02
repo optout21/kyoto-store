@@ -20,7 +20,7 @@ const MAX_PEERS: u8 = 15;
 /// ```no_run
 /// use std::net::{IpAddr, Ipv4Addr};
 /// use std::collections::HashSet;
-/// use bip157::{Builder, Network};
+/// use bip157_store::{Builder, Network};
 ///
 /// let host = (IpAddr::from(Ipv4Addr::new(0, 0, 0, 0)), None);
 /// let builder = Builder::new(Network::Regtest);
