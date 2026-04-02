@@ -8,7 +8,8 @@ use bip157_store::{
     chain::{checkpoints::HeaderCheckpoint, BlockHeaderChanges, ChainState},
     client::Client,
     node::Node,
-    Address, BlockHash, Event, Info, ServiceFlags, Transaction, TrustedPeer, Warning,
+    Address, BlockHash, Event, Info, NoStorageFilterStore, ServiceFlags, Transaction, TrustedPeer,
+    Warning,
 };
 use bitcoin::{
     absolute,
@@ -53,7 +54,7 @@ fn new_node(
     socket_addr: SocketAddrV4,
     tempdir_path: PathBuf,
     chain_state: ChainState,
-) -> (Node, Client) {
+) -> (Node<NoStorageFilterStore>, Client) {
     let host = (IpAddr::V4(*socket_addr.ip()), Some(socket_addr.port()));
     let mut trusted: TrustedPeer = host.into();
     trusted.set_services(ServiceFlags::P2P_V2);

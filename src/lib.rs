@@ -55,6 +55,8 @@ pub mod builder;
 pub mod client;
 /// Errors associated with a node.
 pub mod error;
+/// Trait for filter store
+pub mod filter_store_trait;
 /// Messages the node may send a client.
 pub mod messages;
 /// The structure that communicates with the Bitcoin P2P network and collects data.
@@ -79,10 +81,11 @@ use tokio::sync::mpsc::UnboundedSender;
 
 #[doc(inline)]
 pub use {
-    crate::builder::Builder,
+    crate::builder::{Builder, BuilderWithStore},
     crate::chain::ChainState,
     crate::client::{Client, Requester},
     crate::error::{ClientError, NodeError},
+    crate::filter_store_trait::{FilterStoreTrait, NoStorageFilterStore},
     crate::messages::{Event, Info, Progress, RejectPayload, SyncUpdate, Warning},
     crate::node::Node,
 };

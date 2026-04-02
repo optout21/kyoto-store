@@ -220,6 +220,7 @@ impl From<CFHeaders> for CFHeaderBatch {
 pub(crate) struct FilterCheck {
     // This filter was for the `stop_hash`
     pub(crate) was_last_in_batch: bool,
+    pub(crate) height: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -234,7 +235,7 @@ impl Filter {
     pub fn new(contents: Vec<u8>, block_hash: BlockHash) -> Self {
         let hash = sha256d::Hash::hash(&contents);
         let filter_hash = FilterHash::from_raw_hash(hash);
-        let block_filter = BlockFilter::new(&contents);
+        let block_filter = BlockFilter::new(&contents); // TODO prevent copy here?
         Self {
             filter_hash,
             block_hash,

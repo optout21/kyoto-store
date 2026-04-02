@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::{path::PathBuf, time::Duration};
 
 use bitcoin::Network;
@@ -5,7 +6,7 @@ use bitcoin::Network;
 use super::{client::Client, node::Node};
 use crate::chain::ChainState;
 use crate::network::ConnectionType;
-use crate::{Config, FilterType};
+use crate::{Config, FilterStoreTrait, FilterType, NoStorageFilterStore};
 use crate::{Socks5Proxy, TrustedPeer};
 
 const MIN_PEERS: u8 = 1;
@@ -29,17 +30,28 @@ const MAX_PEERS: u8 = 15;
 ///     .build();
 /// ```
 #[derive(Debug)]
-pub struct Builder {
+pub struct BuilderWithStore<S>
+where
+    S: FilterStoreTrait,
+{
     config: Config,
     network: Network,
+    phantom: std::marker::PhantomData<S>, // Needed to have <S>
 }
 
-impl Builder {
+/// The default Builder with the default storage (NoStorageFilterStore)
+pub type Builder = BuilderWithStore<NoStorageFilterStore>;
+
+impl<S> BuilderWithStore<S>
+where
+    S: FilterStoreTrait,
+{
     /// Create a new [`Builder`].
     pub fn new(network: Network) -> Self {
         Self {
             config: Config::default(),
             network,
+            phantom: PhantomData,
         }
     }
 
@@ -138,7 +150,15 @@ impl Builder {
     }
 
     /// Consume the node builder and receive a [`Node`] and [`Client`].
-    pub fn build(mut self) -> (Node, Client) {
-        Node::new(self.network, core::mem::take(&mut self.config))
+    pub fn build(mut self) -> (Node<S>, Client) {
+        Node::<S>::new(self.network, core::mem::take(&mut self.config))
+    }
+
+    /// Consume the node builder and receive a [`Node`] and [`Client`].
+    pub fn build_with_store<SS>(mut self) -> (Node<SS>, Client)
+    where
+        SS: FilterStoreTrait,
+    {
+        Node::<SS>::new(self.network, core::mem::take(&mut self.config))
     }
 }
