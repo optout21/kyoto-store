@@ -320,6 +320,7 @@ impl Chain {
         {
             return Ok(FilterCheck {
                 was_last_in_batch: false,
+                height: None,
             });
         }
         let expected_filter_hash = self
@@ -349,7 +350,7 @@ impl Chain {
             .ok_or(CFilterSyncError::UnrequestedStophash)?
             .stop_hash;
         let was_last_in_batch = filter_message.block_hash.eq(&stop_hash);
-        Ok(FilterCheck { was_last_in_batch })
+        Ok(FilterCheck { was_last_in_batch, height: Some(height) })
     }
 
     // Next filter message, if there is one

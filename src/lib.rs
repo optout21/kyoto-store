@@ -53,6 +53,8 @@ mod broadcaster;
 pub mod builder;
 /// Structures to communicate with a node.
 pub mod client;
+/// Trait for filter store
+pub mod filter_store_trait;
 /// Errors associated with a node.
 pub mod error;
 /// Messages the node may send a client.
@@ -79,10 +81,11 @@ use tokio::sync::mpsc::UnboundedSender;
 
 #[doc(inline)]
 pub use {
-    crate::builder::Builder,
+    crate::builder::{Builder, BuilderWithStore},
     crate::chain::ChainState,
     crate::client::{Client, Requester},
     crate::error::{ClientError, NodeError},
+    crate::filter_store_trait::{FilterStoreTrait, NoStorageFilterStore},
     crate::messages::{Event, Info, Progress, RejectPayload, SyncUpdate, Warning},
     crate::node::Node,
 };

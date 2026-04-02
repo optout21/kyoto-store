@@ -5,7 +5,7 @@ use bitcoin::{
     hashes::Hash,
     p2p::{
         message_blockdata::GetHeadersMessage,
-        message_filter::{CFHeaders, CFilter},
+        message_filter::{CFHeaders, CFilter, GetCFilters},
         message_network::VersionMessage,
         ServiceFlags,
     },
@@ -32,6 +32,7 @@ use crate::{
         CFHeaderChanges, ChainState, FilterCheck, HeightMonitor,
     },
     error::FetchBlockError,
+    filter_store_trait::FilterStoreTrait,
     messages::ClientRequest,
     network::{
         peer_map::PeerMap, LastBlockMonitor, MainThreadMessage, PeerId, PeerMessage,
@@ -54,7 +55,7 @@ type PeerRequirement = usize;
 
 /// A compact block filter node. Nodes download Bitcoin block headers, block filters, and blocks to send relevant events to a client.
 #[derive(Debug)]
-pub struct Node {
+pub struct Node<S> where S: FilterStoreTrait {
     state: NodeState,
     chain: Chain,
     peer_map: PeerMap,
@@ -63,9 +64,10 @@ pub struct Node {
     block_queue: BlockQueue,
     client_recv: UnboundedReceiver<ClientMessage>,
     peer_recv: Receiver<PeerThreadMessage>,
+    filter_store: S,
 }
 
-impl Node {
+impl<S> Node<S> where S: FilterStoreTrait {
     pub(crate) fn new(network: Network, config: Config) -> (Self, Client) {
         let Config {
             required_peers,
@@ -110,6 +112,14 @@ impl Node {
             required_peers,
             filter_type,
         );
+
+        // TODO not hardcoded
+        let filter_file_path = "./blockfilter.dat";
+        // TODO no unwrap
+        let filter_store = S::open(filter_file_path).unwrap();
+        // TODO: log
+        println!("Filter store count: {}  totsize {}", filter_store.count(), filter_store.total_size());
+
         (
             Self {
                 state,
@@ -120,6 +130,7 @@ impl Node {
                 block_queue: BlockQueue::new(),
                 client_recv: crx,
                 peer_recv: mrx,
+                filter_store,
             },
             client,
         )
@@ -363,6 +374,76 @@ impl Node {
         }
     }
 
+    fn load_filter_from_store(&mut self, height: u32, filter_type: u8) -> (bool, Option<BlockHash>) {
+        match self.filter_store.get(height) {
+            Err(_) => {
+                (false, None)
+            }
+            Ok(None) => {
+                (false, None)
+            }
+            Ok(Some((block_hash, data))) => {
+                // we got the filter from the store, process it
+                let block_hash = BlockHash::from_byte_array(block_hash);
+                // println!("h {}  len {}", height, data.len()); // block_hash
+                // add filter to chain
+                let cfilter = CFilter {
+                    block_hash,
+                    filter_type,
+                    filter: data,
+                };
+                match self.chain.sync_filter(cfilter) {
+                    Err(err) => {
+                        eprintln!("Error adding filter chain {} {}", height, err);
+                        (false, Some(block_hash))
+                    }
+                    Ok(_) => {
+                        // println!("Filter {} added to chain", height);
+                        (true, Some(block_hash))
+                    }
+                }
+            }
+        }
+    }
+
+    fn next_uncached_filter_message(&mut self) -> GetCFilters {
+        let mut prev_height = 0u32;
+        let mut loaded_count = 0;
+        loop {
+            let uncached = self.chain.next_filter_message();
+            // check from store
+            if uncached.start_height == prev_height {
+                println!("stalling, after loading {}", loaded_count); // stalling busy loop
+                return uncached;
+            }
+            // check in storage. attempt to load
+            let mut height = uncached.start_height;
+            let mut loaded_batch_count = 0;
+            loop {
+                let (loaded, block_hash) = self.load_filter_from_store(height, uncached.filter_type);
+                if !loaded {
+                    // not in store, proceed to get from the network
+                    if loaded_count > 2 {
+                        println!("Loaded {}/{} filters from store", loaded_batch_count, loaded_count);
+                    }
+                    return self.chain.next_filter_message();
+                }
+                loaded_batch_count += 1;
+                loaded_count += 1;
+                if let Some(block_hash) = block_hash {
+                    if block_hash == uncached.stop_hash {
+                        // got to the end of batch, continue to with next batch
+                        println!("Loaded all block filters from batch, {}/{}", loaded_batch_count, loaded_count);
+                        break;
+                    }
+                }
+                height += 1;
+            }
+            prev_height = uncached.start_height;
+            // found in store, try with next
+        }
+    }
+
     // After we receiving some chain-syncing message, we decide what chain of data needs to be
     // requested next.
     async fn next_stateful_message(&mut self) -> Option<MainThreadMessage> {
@@ -379,7 +460,7 @@ impl Node {
             ));
         } else if !self.chain.is_filters_synced() {
             return Some(MainThreadMessage::GetFilters(
-                self.chain.next_filter_message(),
+                self.next_uncached_filter_message(),
             ));
         }
         None
@@ -502,13 +583,33 @@ impl Node {
         peer_id: PeerId,
         filter: CFilter,
     ) -> Option<MainThreadMessage> {
+        let filter_data_clone = filter.filter.clone(); // TODO optimize
+        let block_hash = filter.block_hash.clone();
         match self.chain.sync_filter(filter) {
             Ok(potential_message) => {
-                let FilterCheck { was_last_in_batch } = potential_message;
+                let FilterCheck { was_last_in_batch, height } = potential_message;
+                // Adding filter to store
+                // TODO: Only if buried deep enough (for reorgs)
+                if let Some(height) = height {
+                    let header_tip = self.chain.header_chain.height();
+                    // println!("Adding filter to store: {}/{} {} {}", height, header_tip, block_hash, filter_data_clone.len());
+                    match self.filter_store.add(block_hash.as_byte_array(), height, header_tip, &filter_data_clone) {
+                        Ok(_) => {
+                            // println!("Filter added, {} {} {}", height, self.filter_store.count(), filter_data_clone.len());
+                        }
+                        Err(err) => {
+                            // TODO log
+                            eprintln!("Error adding filter {}", err);
+                        }
+                    }
+                } else {
+                    eprintln!("Not adding filter, no height {}", was_last_in_batch);
+                }
+
                 if was_last_in_batch {
                     self.chain.send_chain_update().await;
                     if !self.chain.is_filters_synced() {
-                        let next_filters = self.chain.next_filter_message();
+                        let next_filters = self.next_uncached_filter_message();
                         return Some(MainThreadMessage::GetFilters(next_filters));
                     }
                 }
@@ -553,9 +654,9 @@ impl Node {
                 match block_recipient {
                     BlockRecipient::Client(sender) => {
                         let send_err = sender.send(Ok(IndexedBlock::new(height, block))).is_err();
-                        if send_err {
-                            self.dialog.send_warning(Warning::ChannelDropped);
-                        };
+                if send_err {
+                    self.dialog.send_warning(Warning::ChannelDropped);
+                };
                     }
                     BlockRecipient::Event => {
                         self.dialog
@@ -634,7 +735,7 @@ impl Node {
                 self.chain.clear_filters();
                 self.state = NodeState::FilterHeadersSynced;
                 Some(MainThreadMessage::GetFilters(
-                    self.chain.next_filter_message(),
+                    self.next_uncached_filter_message(),
                 ))
             }
         }
