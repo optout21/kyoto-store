@@ -601,7 +601,7 @@ where
         filter: CFilter,
     ) -> Option<MainThreadMessage> {
         let filter_data_clone = filter.filter.clone(); // TODO optimize
-        let block_hash = filter.block_hash.clone();
+        let block_hash = filter.block_hash;
         match self.chain.sync_filter(filter) {
             Ok(potential_message) => {
                 let FilterCheck {
