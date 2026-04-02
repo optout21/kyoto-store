@@ -8,7 +8,8 @@ use bip157_store::{
     chain::{checkpoints::HeaderCheckpoint, BlockHeaderChanges, ChainState},
     client::Client,
     node::Node,
-    Address, BlockHash, Event, Info, NoStorageFilterStore, ServiceFlags, Transaction, TrustedPeer, Warning,
+    Address, BlockHash, Event, Info, NoStorageFilterStore, ServiceFlags, Transaction, TrustedPeer,
+    Warning,
 };
 use bitcoin::{
     absolute,

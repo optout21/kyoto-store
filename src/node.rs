@@ -55,7 +55,10 @@ type PeerRequirement = usize;
 
 /// A compact block filter node. Nodes download Bitcoin block headers, block filters, and blocks to send relevant events to a client.
 #[derive(Debug)]
-pub struct Node<S> where S: FilterStoreTrait {
+pub struct Node<S>
+where
+    S: FilterStoreTrait,
+{
     state: NodeState,
     chain: Chain,
     peer_map: PeerMap,
@@ -67,7 +70,10 @@ pub struct Node<S> where S: FilterStoreTrait {
     filter_store: S,
 }
 
-impl<S> Node<S> where S: FilterStoreTrait {
+impl<S> Node<S>
+where
+    S: FilterStoreTrait,
+{
     pub(crate) fn new(network: Network, config: Config) -> (Self, Client) {
         let Config {
             required_peers,
@@ -118,7 +124,11 @@ impl<S> Node<S> where S: FilterStoreTrait {
         // TODO no unwrap
         let filter_store = S::open(filter_file_path).unwrap();
         // TODO: log
-        println!("Filter store count: {}  totsize {}", filter_store.count(), filter_store.total_size());
+        println!(
+            "Filter store count: {}  totsize {}",
+            filter_store.count(),
+            filter_store.total_size()
+        );
 
         (
             Self {
@@ -374,14 +384,14 @@ impl<S> Node<S> where S: FilterStoreTrait {
         }
     }
 
-    fn load_filter_from_store(&mut self, height: u32, filter_type: u8) -> (bool, Option<BlockHash>) {
+    fn load_filter_from_store(
+        &mut self,
+        height: u32,
+        filter_type: u8,
+    ) -> (bool, Option<BlockHash>) {
         match self.filter_store.get(height) {
-            Err(_) => {
-                (false, None)
-            }
-            Ok(None) => {
-                (false, None)
-            }
+            Err(_) => (false, None),
+            Ok(None) => (false, None),
             Ok(Some((block_hash, data))) => {
                 // we got the filter from the store, process it
                 let block_hash = BlockHash::from_byte_array(block_hash);
@@ -420,11 +430,15 @@ impl<S> Node<S> where S: FilterStoreTrait {
             let mut height = uncached.start_height;
             let mut loaded_batch_count = 0;
             loop {
-                let (loaded, block_hash) = self.load_filter_from_store(height, uncached.filter_type);
+                let (loaded, block_hash) =
+                    self.load_filter_from_store(height, uncached.filter_type);
                 if !loaded {
                     // not in store, proceed to get from the network
                     if loaded_count > 2 {
-                        println!("Loaded {}/{} filters from store", loaded_batch_count, loaded_count);
+                        println!(
+                            "Loaded {}/{} filters from store",
+                            loaded_batch_count, loaded_count
+                        );
                     }
                     return self.chain.next_filter_message();
                 }
@@ -433,7 +447,10 @@ impl<S> Node<S> where S: FilterStoreTrait {
                 if let Some(block_hash) = block_hash {
                     if block_hash == uncached.stop_hash {
                         // got to the end of batch, continue to with next batch
-                        println!("Loaded all block filters from batch, {}/{}", loaded_batch_count, loaded_count);
+                        println!(
+                            "Loaded all block filters from batch, {}/{}",
+                            loaded_batch_count, loaded_count
+                        );
                         break;
                     }
                 }
@@ -587,13 +604,21 @@ impl<S> Node<S> where S: FilterStoreTrait {
         let block_hash = filter.block_hash.clone();
         match self.chain.sync_filter(filter) {
             Ok(potential_message) => {
-                let FilterCheck { was_last_in_batch, height } = potential_message;
+                let FilterCheck {
+                    was_last_in_batch,
+                    height,
+                } = potential_message;
                 // Adding filter to store
                 // TODO: Only if buried deep enough (for reorgs)
                 if let Some(height) = height {
                     let header_tip = self.chain.header_chain.height();
                     // println!("Adding filter to store: {}/{} {} {}", height, header_tip, block_hash, filter_data_clone.len());
-                    match self.filter_store.add(block_hash.as_byte_array(), height, header_tip, &filter_data_clone) {
+                    match self.filter_store.add(
+                        block_hash.as_byte_array(),
+                        height,
+                        header_tip,
+                        &filter_data_clone,
+                    ) {
                         Ok(_) => {
                             // println!("Filter added, {} {} {}", height, self.filter_store.count(), filter_data_clone.len());
                         }
@@ -654,9 +679,9 @@ impl<S> Node<S> where S: FilterStoreTrait {
                 match block_recipient {
                     BlockRecipient::Client(sender) => {
                         let send_err = sender.send(Ok(IndexedBlock::new(height, block))).is_err();
-                if send_err {
-                    self.dialog.send_warning(Warning::ChannelDropped);
-                };
+                        if send_err {
+                            self.dialog.send_warning(Warning::ChannelDropped);
+                        };
                     }
                     BlockRecipient::Event => {
                         self.dialog

@@ -53,10 +53,10 @@ mod broadcaster;
 pub mod builder;
 /// Structures to communicate with a node.
 pub mod client;
-/// Trait for filter store
-pub mod filter_store_trait;
 /// Errors associated with a node.
 pub mod error;
+/// Trait for filter store
+pub mod filter_store_trait;
 /// Messages the node may send a client.
 pub mod messages;
 /// The structure that communicates with the Bitcoin P2P network and collects data.
